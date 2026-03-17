@@ -1,6 +1,6 @@
 ---
 name: exfiltration-detection
-description: "Detect data exfiltration attempts in Snowflake. Use when: investigating bulk data exports, suspicious UNLOAD/COPY activity, external stage transfers, GET commands, presigned URL generation, unusual stage creation, or data sharing activity. Triggers: exfiltration, data theft, bulk export, UNLOAD, COPY INTO, GET command, presigned URL, external stage, data leak, data sharing, CREATE SHARE, listing, marketplace."
+description: "Detect data exfiltration attempts in Snowflake. Use when: investigating bulk data exports, suspicious UNLOAD/COPY activity, external stage transfers, GET commands, presigned URL generation, unusual stage creation, data sharing activity, new applications, OAuth integrations, security integration changes, external functions, or native apps. Triggers: exfiltration, data theft, bulk export, UNLOAD, COPY INTO, GET command, presigned URL, external stage, data leak, data sharing, CREATE SHARE, listing, marketplace, OAuth, integration, native app, external function, connector, application installed, app changed."
 ---
 
 # Exfiltration Detection
@@ -243,6 +243,294 @@ ORDER BY rows_produced DESC
 LIMIT 100;
 ```
 
+---
+
+### Application & Integration Monitoring
+
+#### 2m: New/Modified OAuth Integrations (Snowflake Connectors, 3rd Party Apps)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    query_type,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    query_type IN ('CREATE_INTEGRATION', 'ALTER_INTEGRATION', 'DROP_INTEGRATION')
+    OR LOWER(query_text) LIKE '%security integration%'
+    OR LOWER(query_text) LIKE '%api integration%'
+    OR LOWER(query_text) LIKE '%external_oauth%'
+    OR LOWER(query_text) LIKE '%oauth%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2n: Security Integration Changes (SCIM, SSO, SAML)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%scim%'
+    OR LOWER(query_text) LIKE '%saml%'
+    OR LOWER(query_text) LIKE '%type = saml2%'
+    OR LOWER(query_text) LIKE '%type = scim%'
+  )
+  AND query_type IN ('CREATE_INTEGRATION', 'ALTER_INTEGRATION', 'DROP_INTEGRATION')
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2o: External Functions (Potential Data Egress via API)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    query_type,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%external function%'
+    OR LOWER(query_text) LIKE '%create function%api_integration%'
+    OR LOWER(query_text) LIKE '%external access integration%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2p: Native Apps Installed/Modified
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    query_type,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    query_type LIKE '%APPLICATION%'
+    OR LOWER(query_text) LIKE '%create application%'
+    OR LOWER(query_text) LIKE '%alter application%'
+    OR LOWER(query_text) LIKE '%drop application%'
+    OR LOWER(query_text) LIKE '%application package%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2q: Current Integrations Inventory
+
+```sql
+SHOW INTEGRATIONS;
+```
+
+#### 2r: External Access Integrations (Network Egress Points)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%external access%'
+    OR LOWER(query_text) LIKE '%network rule%'
+    OR LOWER(query_text) LIKE '%secret%type%generic%'
+  )
+  AND query_type LIKE 'CREATE%'
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2s: Grants to Applications (Data Access by Apps)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 300) as query_preview,
+    start_time
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE LOWER(query_text) LIKE '%grant%to application%'
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2t: Replication Configuration Changes
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    query_type,
+    LEFT(query_text, 300) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    query_type LIKE '%REPLICATION%'
+    OR query_type LIKE '%FAILOVER%'
+    OR LOWER(query_text) LIKE '%enable_replication%'
+    OR LOWER(query_text) LIKE '%alter database%enable replication%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+---
+
+### External & Iceberg Tables (Data Egress to External Storage)
+
+#### 2u: External Table Creation (Potential Attacker-Controlled Storage)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 400) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%create%external table%'
+    OR LOWER(query_text) LIKE '%create or replace external table%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2v: Iceberg Table Creation (External Catalog/Storage)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 400) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%create%iceberg table%'
+    OR LOWER(query_text) LIKE '%create or replace iceberg table%'
+    OR LOWER(query_text) LIKE '%catalog_sync%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2w: External Volume Creation (S3/Azure/GCS Storage Targets)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 400) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%create%external volume%'
+    OR LOWER(query_text) LIKE '%alter external volume%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2x: Catalog Integration Changes (External Iceberg Catalogs)
+
+```sql
+SELECT
+    query_id,
+    user_name,
+    role_name,
+    LEFT(query_text, 400) as query_preview,
+    start_time,
+    execution_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+WHERE (
+    LOWER(query_text) LIKE '%catalog integration%'
+    OR LOWER(query_text) LIKE '%create%integration%type%glue%'
+    OR LOWER(query_text) LIKE '%create%integration%type%object_store%'
+  )
+  AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+ORDER BY start_time DESC
+LIMIT 100;
+```
+
+#### 2y: Current External Tables Inventory
+
+```sql
+SELECT
+    table_catalog as database_name,
+    table_schema as schema_name,
+    table_name,
+    table_owner,
+    created,
+    last_altered,
+    comment
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
+WHERE table_type = 'EXTERNAL TABLE'
+  AND deleted IS NULL
+ORDER BY created DESC
+LIMIT 100;
+```
+
+#### 2z: Current Iceberg Tables Inventory
+
+```sql
+SELECT
+    table_catalog as database_name,
+    table_schema as schema_name,
+    table_name,
+    table_owner,
+    created,
+    last_altered,
+    comment
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
+WHERE is_iceberg = 'YES'
+  AND deleted IS NULL
+ORDER BY created DESC
+LIMIT 100;
+```
+
+---
+
 ### Step 3: Analyze Results
 
 For each finding, evaluate:
@@ -260,6 +548,17 @@ For each finding, evaluate:
 | Listing | New marketplace listings |
 | UI Download | Large result sets (>10K rows) from SELECT |
 | UI Download | RESULT_SCAN usage to re-fetch results |
+| **Apps/Integrations** | **New OAuth integrations created** |
+| **Apps/Integrations** | **Security integrations modified (SCIM/SAML)** |
+| **Apps/Integrations** | **External functions with API access** |
+| **Apps/Integrations** | **Native apps installed from unknown sources** |
+| **Apps/Integrations** | **External access integrations (network egress)** |
+| **Apps/Integrations** | **Grants to applications on sensitive data** |
+| **Replication** | **Replication enabled to external accounts** |
+| **External Tables** | **External tables pointing to unknown storage** |
+| **External Tables** | **Iceberg tables with external catalog/volume** |
+| **External Tables** | **New external volumes (S3/Azure/GCS)** |
+| **External Tables** | **Catalog integrations (Glue, Unity, etc.)** |
 
 ### Step 4: Present Findings
 
@@ -292,6 +591,13 @@ Based on findings, suggest:
 - Access grants to revoke
 - Shares to review or drop
 - Listings to unpublish
+- **Integrations to disable or audit**
+- **Applications to review permissions or remove**
+- **External functions to restrict or drop**
+- **Replication configurations to review**
+- **External tables pointing to suspicious storage locations**
+- **Iceberg tables with unauthorized external volumes**
+- **Catalog integrations to audit or remove**
 
 **⚠️ STOP**: Wait for user to decide on next steps.
 
