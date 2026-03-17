@@ -2,3 +2,4 @@
 .env
 # pyproject.toml generally locks the dependencies already. No need to track this file.
 uv.lock
+.DS_Store
