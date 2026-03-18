@@ -115,8 +115,7 @@ LEFT JOIN ip_sharing s ON a.client_ip = s.client_ip
 LEFT JOIN brute_force bf ON a.client_ip = bf.client_ip
 WHERE a.is_new_ip OR a.is_rapid_ip_change OR a.is_failed_login 
    OR s.client_ip IS NOT NULL OR bf.client_ip IS NOT NULL
-ORDER BY risk_score DESC, event_timestamp DESC
-LIMIT 100;
+ORDER BY risk_score DESC, event_timestamp DESC;
 ```
 
 **For ORGANIZATION_USAGE (includes account_name):**
@@ -186,8 +185,7 @@ LEFT JOIN ip_sharing s ON a.account_name = s.account_name AND a.client_ip = s.cl
 LEFT JOIN brute_force bf ON a.account_name = bf.account_name AND a.client_ip = bf.client_ip
 WHERE a.is_new_ip OR a.is_rapid_ip_change OR a.is_failed_login 
    OR s.client_ip IS NOT NULL OR bf.client_ip IS NOT NULL
-ORDER BY risk_score DESC, event_timestamp DESC
-LIMIT 100;
+ORDER BY risk_score DESC, event_timestamp DESC;
 ```
 
 ### Step 3: Summarize Findings

@@ -126,7 +126,6 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%accountadmin%'
   AND query_type = 'GRANT'
   AND start_time >= DATEADD('day', -7, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
 ORDER BY start_time DESC;
 
 -- 2. Failed logins from brute force IPs
@@ -151,14 +150,14 @@ SELECT user_name as created_by, LEFT(query_text, 150), start_time
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'CREATE_USER'
   AND start_time >= DATEADD('day', -7, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS';
+;
 
 -- 5. New integrations/applications
 SELECT user_name, query_type, LEFT(query_text, 150), start_time
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type IN ('CREATE_INTEGRATION', 'ALTER_INTEGRATION')
   AND start_time >= DATEADD('day', -7, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS';
+;
 ```
 
 ---

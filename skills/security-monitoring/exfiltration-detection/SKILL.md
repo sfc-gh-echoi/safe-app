@@ -66,8 +66,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'UNLOAD'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND NOT is_client_generated_statement
-ORDER BY bytes_scanned DESC
-LIMIT 100;
+ORDER BY bytes_scanned DESC;
 ```
 
 #### 2b: COPY INTO with External URLs or User Stages
@@ -92,8 +91,7 @@ WHERE query_type = 'COPY'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND NOT is_client_generated_statement
-ORDER BY bytes_scanned DESC
-LIMIT 100;
+ORDER BY bytes_scanned DESC;
 ```
 
 #### 2c: GET Commands (Download from Stages)
@@ -109,8 +107,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'GET_FILES'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2d: GET_PRESIGNED_URL Function Calls
@@ -127,8 +124,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%get_presigned_url%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND NOT is_client_generated_statement
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2e: Stage Creation Events
@@ -144,8 +140,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'CREATE_STAGE'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2f: COPY FILES Commands
@@ -162,8 +157,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%copy files%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND NOT is_client_generated_statement
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2g: Data Sharing - CREATE/ALTER SHARE
@@ -180,8 +174,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type IN ('CREATE_SHARE', 'ALTER_SHARE')
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2h: Data Sharing - Listing Activity
@@ -198,8 +191,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type LIKE '%LISTING%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2i: Active Shares and Their Contents
@@ -226,8 +218,7 @@ SELECT
     created_on
 FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_SHARES
 WHERE deleted_on IS NULL
-ORDER BY created_on DESC
-LIMIT 100;
+ORDER BY created_on DESC;
 ```
 
 #### 2k: Large Result Set Downloads (UI Exfiltration)
@@ -244,12 +235,10 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE rows_produced > 10000
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
   AND query_type = 'SELECT'
   AND user_name != 'SYSTEM'
   AND NOT is_client_generated_statement
-ORDER BY rows_produced DESC
-LIMIT 100;
+ORDER BY rows_produced DESC;
 ```
 
 #### 2l: RESULT_SCAN Usage (Indicates Result Re-download)
@@ -267,8 +256,7 @@ WHERE LOWER(query_text) LIKE '%result_scan%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND user_name != 'SYSTEM'
   AND NOT is_client_generated_statement
-ORDER BY rows_produced DESC
-LIMIT 100;
+ORDER BY rows_produced DESC;
 ```
 
 ---
@@ -295,8 +283,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%oauth%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2n: Security Integration Changes (SCIM, SSO, SAML)
@@ -318,8 +305,7 @@ WHERE (
   )
   AND query_type IN ('CREATE_INTEGRATION', 'ALTER_INTEGRATION', 'DROP_INTEGRATION')
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2o: External Functions (Potential Data Egress via API)
@@ -340,8 +326,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%external access integration%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2p: Native Apps Installed/Modified
@@ -364,8 +349,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%application package%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2q: Current Integrations Inventory
@@ -392,8 +376,7 @@ WHERE (
   )
   AND query_type LIKE 'CREATE%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2s: Grants to Applications (Data Access by Apps)
@@ -408,8 +391,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%to application%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2t: Replication Configuration Changes
@@ -431,8 +413,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%alter database%enable replication%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -455,8 +436,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%create or replace external table%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2v: Iceberg Table Creation (External Catalog/Storage)
@@ -476,8 +456,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%catalog_sync%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2w: External Volume Creation (S3/Azure/GCS Storage Targets)
@@ -496,8 +475,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%alter external volume%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2x: Catalog Integration Changes (External Iceberg Catalogs)
@@ -517,8 +495,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%create%integration%type%object_store%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2y: Current External Tables Inventory
@@ -535,8 +512,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
 WHERE table_type = 'EXTERNAL TABLE'
   AND deleted IS NULL
-ORDER BY created DESC
-LIMIT 100;
+ORDER BY created DESC;
 ```
 
 #### 2z: Current Iceberg Tables Inventory
@@ -553,8 +529,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
 WHERE is_iceberg = 'YES'
   AND deleted IS NULL
-ORDER BY created DESC
-LIMIT 100;
+ORDER BY created DESC;
 ```
 
 #### 2aa: New Client Apps Observed Against Users

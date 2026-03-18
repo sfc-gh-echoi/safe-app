@@ -65,9 +65,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'CREATE_USER'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2b: User Modifications (Password, Properties, Defaults)
@@ -83,9 +81,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'ALTER_USER'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2c: User Deletions (Potential Cover-Up)
@@ -101,9 +97,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'DROP_USER'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -123,9 +117,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'CREATE_ROLE'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2e: Role Modifications
@@ -141,9 +133,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'ALTER_ROLE'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2f: Role Deletions
@@ -159,9 +149,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'DROP_ROLE'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -182,9 +170,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%accountadmin%'
   AND query_type = 'GRANT'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2h: SECURITYADMIN Grants
@@ -201,9 +187,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%securityadmin%'
   AND query_type = 'GRANT'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2i: SYSADMIN Grants
@@ -220,9 +204,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%sysadmin%'
   AND query_type = 'GRANT'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2j: USERADMIN Grants
@@ -239,9 +221,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%grant%useradmin%'
   AND query_type = 'GRANT'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2k: All Privileged Role Grants Combined
@@ -264,9 +244,7 @@ WHERE query_type = 'GRANT'
     OR LOWER(query_text) LIKE '%grant%orgadmin%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -290,9 +268,7 @@ WHERE query_type = 'GRANT'
     OR LOWER(query_text) LIKE '%to user "' || LOWER(user_name) || '"%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2m: Self-Grants via GRANTS_TO_USERS View
@@ -307,8 +283,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
 WHERE grantee_name = granted_by
   AND created_on >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND deleted_on IS NULL
-ORDER BY created_on DESC
-LIMIT 100;
+ORDER BY created_on DESC;
 ```
 
 ---
@@ -328,9 +303,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'GRANT'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 200;
+ORDER BY start_time DESC;
 ```
 
 #### 2o: All REVOKE Statements
@@ -346,9 +319,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'REVOKE'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2p: Grants with ADMIN OPTION (Can Re-Grant)
@@ -365,9 +336,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'GRANT'
   AND LOWER(query_text) LIKE '%with grant option%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -390,9 +359,7 @@ WHERE (
     OR LOWER(query_text) LIKE '%transfer ownership%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-  AND execution_status = 'SUCCESS'
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
@@ -502,8 +469,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'GRANT'
   AND execution_status = 'FAIL'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 #### 2x: Failed User/Role Creation Attempts
@@ -521,8 +487,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type IN ('CREATE_USER', 'CREATE_ROLE', 'ALTER_USER', 'ALTER_ROLE')
   AND execution_status = 'FAIL'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
-ORDER BY start_time DESC
-LIMIT 100;
+ORDER BY start_time DESC;
 ```
 
 ---
