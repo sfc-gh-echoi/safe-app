@@ -67,13 +67,50 @@ ip_sharing AS (
   GROUP BY client_ip HAVING COUNT(DISTINCT user_name) > 3
 ),
 
-brute_force AS (
-  SELECT client_ip, COUNT(*) AS failed_attempts
-  FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
-  WHERE event_timestamp >= DATEADD('day', -7, CURRENT_TIMESTAMP()) 
-    AND is_success = 'NO'
-    AND client_ip != '0.0.0.0'
-  GROUP BY client_ip HAVING COUNT(*) >= 5
+failed_login_attempts AS (
+  -- Step 1: Isolate failed logins in the last 7 days and use a window function 
+  -- to find the timestamp of the 5th prior failed attempt for the same IP.
+  SELECT 
+    CLIENT_IP,
+    USER_NAME,
+    EVENT_TIMESTAMP,
+    LAG(EVENT_TIMESTAMP, 5) OVER (
+      PARTITION BY CLIENT_IP 
+      ORDER BY EVENT_TIMESTAMP
+    ) AS fifth_prev_timestamp
+  FROM 
+    SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
+  WHERE 
+    EVENT_TIMESTAMP >= DATEADD(day, -7, CURRENT_TIMESTAMP())
+    AND IS_SUCCESS = 'NO'
+),
+
+brute_force_bursts AS (
+  -- Step 2: Filter for instances where the 6th failure (current row) 
+  -- happened within 30 seconds of the 1st failure (5 rows ago).
+  SELECT 
+    CLIENT_IP,
+    fifth_prev_timestamp AS burst_start_time,
+    EVENT_TIMESTAMP AS burst_end_time
+  FROM 
+    failed_login_attempts
+  WHERE 
+    fifth_prev_timestamp IS NOT NULL
+    AND DATEDIFF(second, fifth_prev_timestamp, EVENT_TIMESTAMP) <= 30
+),
+
+brute_force as (
+  SELECT 
+    CLIENT_IP,
+    COUNT(*) AS brute_force_triggers,
+    MIN(burst_start_time) AS first_burst_detected,
+    MAX(burst_end_time) AS latest_burst_detected
+  FROM 
+    brute_force_bursts
+  GROUP BY 
+    CLIENT_IP
+  HAVING
+    brute_force_triggers > 5
 )
 
 SELECT 
@@ -111,7 +148,9 @@ Present results grouped by:
 | Detection window | 7 days | Recent activity to scan |
 | Rapid IP change | 10 min | Max time between different IPs |
 | Shared IP threshold | 3+ users | IPs flagged as shared |
-| Brute force threshold | 5+ failures | Failed attempts to flag IP |
+| Brute force failure threshold | 5+ failures | Login events from an IP are considered as a single Brute Force attempt if the number of failures within the Brute force time window exceed the threshold |
+| Brute force time window | 30 seconds | Time window to determine whether a login failure was a brute force attempt|
+| Brute force trigger threshold | 5+ triggers | IP considered as a Brute Force IP if at least the specified number of failures are observed in the Brute force time window |
 
 ## Output
 
