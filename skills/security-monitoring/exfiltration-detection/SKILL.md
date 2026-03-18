@@ -557,6 +557,77 @@ ORDER BY created DESC
 LIMIT 100;
 ```
 
+#### 2aa: New Client Apps Observed Against Users
+
+```sql
+WITH user_client_baseline AS (
+  SELECT
+    user_name,
+    PARSE_JSON(client_environment):"APPLICATION"::string AS client_app,
+FROM
+    snowflake.account_usage.sessions
+WHERE TRUE
+    AND created_on BETWEEN CURRENT_TIMESTAMP() - INTERVAL '60 days' AND CURRENT_TIMESTAMP() - INTERVAL '{{DAYS}} days'
+    AND client_app IS NOT null
+    AND NOT STARTSWITH(client_app, 'Snowflake Web App')
+    AND NOT STARTSWITH(user_name, 'STPLAT')
+GROUP BY user_name, client_app
+),
+
+recent_clients AS (
+  SELECT
+    user_name,
+    MIN(created_on) AS first_seen,
+    MAX(created_on) AS last_seen,
+    PARSE_JSON(client_environment):"APPLICATION"::string AS client_app,
+    COUNT(DISTINCT session_id) AS unique_sessions
+  FROM
+    snowflake.account_usage.sessions
+  WHERE TRUE
+    AND created_on > CURRENT_TIMESTAMP() - INTERVAL '{{DAYS}} days'
+    AND client_app IS NOT null
+    AND NOT STARTSWITH(client_app, 'Snowflake Web App')
+    AND NOT STARTSWITH(user_name, 'STPLAT')
+GROUP BY user_name, client_app
+),
+
+anomalies AS (
+  SELECT
+    r.user_name,
+    r.first_seen,
+    r.last_seen,
+    r.client_app,
+    r.unique_sessions,
+  CASE WHEN b.client_app IS NULL THEN true ELSE false END AS is_new_app,
+  CASE
+    WHEN STARTSWITH(r.client_app, 'SNOWCLI.') THEN true
+    WHEN STARTSWITH(r.client_app, 'streamlit:Snow') THEN true
+    WHEN r.client_app IN (
+        'cortex_code_desktop', 'CORTEX_CODE', 'cortex_code_cli', 'COCO_CLI',
+        'streamlit', 'SNOWFLAKE_CLI', 'SnowSQL', 'spcs_system_connection',
+        'Snowflake.SnowConvertDesktop', 'SnowparkML', 'snowflake_dbt',
+        'PythonSnowpark', 'notebook_health_check'
+        ) THEN true
+    ELSE false
+  END AS is_snowflake_app,
+  CASE WHEN r.client_app IN ('PythonConnector', 'Go') THEN true ELSE false END AS connector_used_without_providing_app_name
+  FROM
+    recent_clients r
+    LEFT JOIN user_client_baseline b
+      ON r.user_name = b.user_name AND r.client_app = b.client_app
+)
+SELECT * FROM anomalies
+WHERE TRUE
+  AND is_new_app
+  AND NOT is_snowflake_app
+ORDER BY first_seen DESC, unique_sessions DESC
+LIMIT 1000
+;
+```
+
+Note that new client applications against a user indicates new, potentially unusual behavior but it does not imply data exfiltration attempts.
+Inspecting query history from suspicious client apps will provide more context to the account administrators.
+
 ---
 
 ### Step 3: Analyze Results
@@ -582,6 +653,7 @@ For each finding, evaluate:
 | **Apps/Integrations** | **Native apps installed from unknown sources** |
 | **Apps/Integrations** | **External access integrations (network egress)** |
 | **Apps/Integrations** | **Grants to applications on sensitive data** |
+| **Apps/Integrations** | **New Client Applications Used by a User** |
 | **Replication** | **Replication enabled to external accounts** |
 | **External Tables** | **External tables pointing to unknown storage** |
 | **External Tables** | **Iceberg tables with external catalog/volume** |
@@ -641,6 +713,7 @@ Based on findings, suggest:
 - Shares to review or drop
 - Listings to unpublish
 - **Integrations to disable or audit**
+- **Review queries from new client applications observed against users**
 - **Applications to review permissions or remove**
 - **External functions to restrict or drop**
 - **Replication configurations to review**
