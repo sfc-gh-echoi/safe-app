@@ -1,6 +1,6 @@
 ---
 name: privilege-escalation
-description: "Detect privilege escalation attempts in Snowflake. Use when: investigating unauthorized access, role changes, suspicious grants, ACCOUNTADMIN abuse, self-grants, new users, backdoor accounts, or RBAC violations. Triggers: privilege escalation, role grant, ACCOUNTADMIN, SECURITYADMIN, SYSADMIN, grant to self, create user, alter user, create role, suspicious grant, backdoor, unauthorized access, RBAC audit, who granted, privilege abuse."
+description: "Detect privilege escalation attempts in Snowflake. Use when: investigating unauthorized access, role changes, suspicious grants, ACCOUNTADMIN abuse, self-grants, new users, backdoor accounts, or RBAC violations. Supports both ACCOUNT_USAGE and ORGANIZATION_USAGE. Triggers: privilege escalation, role grant, ACCOUNTADMIN, SECURITYADMIN, SYSADMIN, grant to self, create user, alter user, create role, suspicious grant, backdoor, unauthorized access, RBAC audit, who granted, privilege abuse."
 ---
 
 # Privilege Escalation Detection
@@ -11,7 +11,7 @@ Analyze Snowflake activity for privilege escalation patterns and unauthorized ac
 
 ### Step 1: Select Detection Scope
 
-**Ask user:**
+**Ask user (Question 1 - Timeframe):**
 ```
 What timeframe should I analyze?
 1. Last 24 hours
@@ -20,11 +20,33 @@ What timeframe should I analyze?
 4. Custom date range
 ```
 
+**Ask user (Question 2 - Scope):**
+```
+What scope should I analyze?
+1. ACCOUNT_USAGE (current account only)
+2. ORGANIZATION_USAGE (all accounts in organization - requires ORGADMIN)
+```
+
 **⚠️ STOP**: Wait for user response.
+
+**Requirements:**
+- ACCOUNT_USAGE: Requires `IMPORTED PRIVILEGES` on SNOWFLAKE database
+- ORGANIZATION_USAGE: Requires `ORGADMIN` role or `USAGE` on `SNOWFLAKE.ORGANIZATION_USAGE`
 
 ### Step 2: Run Detection Queries
 
-Execute these queries against `SNOWFLAKE.ACCOUNT_USAGE` to identify privilege escalation indicators:
+Execute these queries replacing:
+- `{{DAYS}}` with the selected timeframe
+- `{{SCHEMA}}` with either `ACCOUNT_USAGE` or `ORGANIZATION_USAGE`
+
+**For ORGANIZATION_USAGE queries:**
+- Add `account_name` to SELECT columns
+- Add `account_name` to GROUP BY clauses where applicable
+- Include `account_name` in output reports
+
+**Note:** All queries below show ACCOUNT_USAGE syntax. For ORGANIZATION_USAGE:
+- Replace `SNOWFLAKE.ACCOUNT_USAGE` with `SNOWFLAKE.ORGANIZATION_USAGE`
+- Add `account_name` as the first column in SELECT statements
 
 ---
 
@@ -529,12 +551,12 @@ For each finding, evaluate:
 
 **⚠️ MANDATORY CHECKPOINT**: Present summary before recommendations.
 
-Format results as:
-
+**For ACCOUNT_USAGE:**
 ```
 ## Privilege Escalation Detection Summary
 
 **Timeframe**: [date range]
+**Scope**: Current Account
 **Total suspicious events**: [count]
 
 ### Critical Findings (Privileged Role Grants)
@@ -553,6 +575,33 @@ Format results as:
 [Users with multiple admin roles]
 ```
 
+**For ORGANIZATION_USAGE:**
+```
+## Privilege Escalation Detection Summary
+
+**Timeframe**: [date range]
+**Scope**: Organization (all accounts)
+**Total suspicious events**: [count]
+
+### Critical Findings (Privileged Role Grants)
+[ACCOUNTADMIN, SECURITYADMIN, SYSADMIN grants - include account_name]
+
+### High-Risk Findings (Self-Grants, Ownership Changes)
+[Self-grants, ownership transfers - include account_name]
+
+### Findings by Account
+[Aggregate by account_name]
+
+### Medium-Risk Findings (User/Role Changes)
+[New users, role modifications - include account_name]
+
+### Failed Attempts (Potential Probing)
+[Failed grants, blocked operations - include account_name]
+
+### Users with Excessive Privileges
+[Users with multiple admin roles - include account_name]
+```
+
 ---
 
 ### Step 5: Recommend Actions
@@ -566,6 +615,7 @@ Based on findings, suggest:
 - Failed attempts to correlate with other activity
 - MFA enforcement for privileged users
 - Access reviews to schedule
+- (For ORGANIZATION_USAGE) Accounts requiring immediate attention
 
 **⚠️ STOP**: Wait for user to decide on next steps.
 
@@ -582,3 +632,8 @@ Based on findings, suggest:
 ## Output
 
 Summary report of privilege escalation activity with risk-ranked findings and remediation recommendations.
+
+**ORGANIZATION_USAGE outputs include:**
+- Account name in all findings
+- Cross-account analysis
+- Account-level aggregations

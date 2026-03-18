@@ -1,6 +1,6 @@
 ---
 name: exfiltration-detection
-description: "Detect data exfiltration attempts in Snowflake. Use when: investigating bulk data exports, suspicious UNLOAD/COPY activity, external stage transfers, GET commands, presigned URL generation, unusual stage creation, data sharing activity, new applications, OAuth integrations, security integration changes, external functions, or native apps. Triggers: exfiltration, data theft, bulk export, UNLOAD, COPY INTO, GET command, presigned URL, external stage, data leak, data sharing, CREATE SHARE, listing, marketplace, OAuth, integration, native app, external function, connector, application installed, app changed, new client application."
+description: "Detect data exfiltration attempts in Snowflake. Use when: investigating bulk data exports, suspicious UNLOAD/COPY activity, external stage transfers, GET commands, presigned URL generation, unusual stage creation, data sharing activity, new applications, OAuth integrations, security integration changes, external functions, or native apps. Supports both ACCOUNT_USAGE and ORGANIZATION_USAGE. Triggers: exfiltration, data theft, bulk export, UNLOAD, COPY INTO, GET command, presigned URL, external stage, data leak, data sharing, CREATE SHARE, listing, marketplace, OAuth, integration, native app, external function, connector, application installed, app changed."
 ---
 
 # Exfiltration Detection
@@ -11,7 +11,7 @@ Analyze Snowflake activity for potential data exfiltration patterns.
 
 ### Step 1: Select Detection Scope
 
-**Ask user:**
+**Ask user (Question 1 - Timeframe):**
 ```
 What timeframe should I analyze?
 1. Last 24 hours
@@ -20,11 +20,33 @@ What timeframe should I analyze?
 4. Custom date range
 ```
 
+**Ask user (Question 2 - Scope):**
+```
+What scope should I analyze?
+1. ACCOUNT_USAGE (current account only)
+2. ORGANIZATION_USAGE (all accounts in organization - requires ORGADMIN)
+```
+
 **⚠️ STOP**: Wait for user response.
+
+**Requirements:**
+- ACCOUNT_USAGE: Requires `IMPORTED PRIVILEGES` on SNOWFLAKE database
+- ORGANIZATION_USAGE: Requires `ORGADMIN` role or `USAGE` on `SNOWFLAKE.ORGANIZATION_USAGE`
 
 ### Step 2: Run Detection Queries
 
-Execute these queries against `SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY` to identify exfiltration indicators:
+Execute these queries replacing:
+- `{{DAYS}}` with the selected timeframe
+- `{{SCHEMA}}` with either `ACCOUNT_USAGE` or `ORGANIZATION_USAGE`
+
+**For ORGANIZATION_USAGE queries:**
+- Add `account_name` to SELECT columns
+- Add `account_name` to GROUP BY clauses where applicable
+- Include `account_name` in output reports
+
+**Note:** All queries below show ACCOUNT_USAGE syntax. For ORGANIZATION_USAGE:
+- Replace `SNOWFLAKE.ACCOUNT_USAGE` with `SNOWFLAKE.ORGANIZATION_USAGE`
+- Add `account_name` as the first column in SELECT statements
 
 #### 2a: UNLOAD Operations (Data Export to Stages/External Locations)
 
@@ -642,12 +664,12 @@ For each finding, evaluate:
 
 **⚠️ MANDATORY CHECKPOINT**: Present summary before recommendations.
 
-Format results as:
-
+**For ACCOUNT_USAGE:**
 ```
 ## Exfiltration Detection Summary
 
 **Timeframe**: [date range]
+**Scope**: Current Account
 **Total suspicious events**: [count]
 
 ### High-Risk Findings
@@ -658,6 +680,27 @@ Format results as:
 
 ### Users with Multiple Export Events
 [Aggregate by user_name]
+```
+
+**For ORGANIZATION_USAGE:**
+```
+## Exfiltration Detection Summary
+
+**Timeframe**: [date range]
+**Scope**: Organization (all accounts)
+**Total suspicious events**: [count]
+
+### High-Risk Findings
+[List events with high-risk indicators - include account_name]
+
+### Medium-Risk Findings
+[List events with some risk indicators - include account_name]
+
+### Findings by Account
+[Aggregate by account_name]
+
+### Users with Multiple Export Events
+[Aggregate by account_name, user_name]
 ```
 
 ### Step 5: Recommend Actions
@@ -677,6 +720,7 @@ Based on findings, suggest:
 - **External tables pointing to suspicious storage locations**
 - **Iceberg tables with unauthorized external volumes**
 - **Catalog integrations to audit or remove**
+- (For ORGANIZATION_USAGE) Accounts requiring immediate attention
 
 **⚠️ STOP**: Wait for user to decide on next steps.
 
@@ -689,3 +733,8 @@ Based on findings, suggest:
 ## Output
 
 Summary report of potential exfiltration activity with risk-ranked findings and remediation recommendations.
+
+**ORGANIZATION_USAGE outputs include:**
+- Account name in all findings
+- Cross-account analysis
+- Account-level aggregations
