@@ -576,7 +576,7 @@ anomalies AS (
     r.last_seen,
     r.client_app,
     r.unique_sessions,
-  CASE WHEN b.client_app IS NULL THEN TRUE ELSE FALSE END AS is_new_app,
+  CASE WHEN b.client_app IS NULL THEN true ELSE false END AS is_new_app,
   CASE
     WHEN STARTSWITH(r.client_app, 'SNOWCLI.') THEN true
     WHEN STARTSWITH(r.client_app, 'streamlit:Snow') THEN true
