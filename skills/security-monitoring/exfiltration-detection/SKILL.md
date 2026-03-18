@@ -545,7 +545,7 @@ WITH user_client_baseline AS (
 FROM
     snowflake.account_usage.sessions
 WHERE TRUE
-    AND created_on between current_timestamp() - interval '37 days' AND current_timestamp() - interval '7 days'
+    AND created_on BETWEEN CURRENT_TIMESTAMP() - INTERVAL '60 days' AND CURRENT_TIMESTAMP() - INTERVAL '{{DAYS}} days'
     AND client_app IS NOT null
     AND NOT STARTSWITH(client_app, 'Snowflake Web App')
     AND NOT STARTSWITH(user_name, 'STPLAT')
@@ -562,7 +562,7 @@ recent_clients AS (
   FROM
     snowflake.account_usage.sessions
   WHERE TRUE
-    AND created_on > current_timestamp() - interval '7 days'
+    AND created_on > CURRENT_TIMESTAMP() - INTERVAL '{{DAYS}} days'
     AND client_app IS NOT null
     AND NOT STARTSWITH(client_app, 'Snowflake Web App')
     AND NOT STARTSWITH(user_name, 'STPLAT')
