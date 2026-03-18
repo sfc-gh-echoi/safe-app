@@ -56,6 +56,7 @@ WITH user_ip_baseline AS (
   FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
   WHERE event_timestamp >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
     AND client_ip != '0.0.0.0'
+    AND NOT client_ip LIKE '10.%'
   GROUP BY user_name, client_ip
 ),
 
@@ -68,6 +69,7 @@ recent_logins AS (
   FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
   WHERE event_timestamp >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
     AND client_ip != '0.0.0.0'
+    AND NOT client_ip LIKE '10.%'
 ),
 
 anomalies AS (
@@ -87,6 +89,7 @@ ip_sharing AS (
   FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
   WHERE event_timestamp >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
     AND client_ip != '0.0.0.0'
+    AND NOT client_ip LIKE '10.%'
   GROUP BY client_ip HAVING COUNT(DISTINCT user_name) > 3
 ),
 
@@ -96,6 +99,7 @@ brute_force AS (
   WHERE event_timestamp >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP()) 
     AND is_success = 'NO'
     AND client_ip != '0.0.0.0'
+    AND NOT client_ip LIKE '10.%'
   GROUP BY client_ip HAVING COUNT(*) >= 5
 )
 
