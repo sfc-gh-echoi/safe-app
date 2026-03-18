@@ -670,6 +670,7 @@ Based on findings, suggest:
 - Shares to review or drop
 - Listings to unpublish
 - **Integrations to disable or audit**
+- **Review queries from new client applications observed against users**
 - **Applications to review permissions or remove**
 - **External functions to restrict or drop**
 - **Replication configurations to review**
