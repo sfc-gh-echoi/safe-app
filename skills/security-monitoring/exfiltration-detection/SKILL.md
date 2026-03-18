@@ -43,6 +43,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE query_type = 'UNLOAD'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+  AND NOT is_client_generated_statement
 ORDER BY bytes_scanned DESC
 LIMIT 100;
 ```
@@ -68,6 +69,7 @@ WHERE query_type = 'COPY'
     OR LOWER(query_text) LIKE '%@~%'
   )
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+  AND NOT is_client_generated_statement
 ORDER BY bytes_scanned DESC
 LIMIT 100;
 ```
@@ -102,6 +104,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%get_presigned_url%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+  AND NOT is_client_generated_statement
 ORDER BY start_time DESC
 LIMIT 100;
 ```
@@ -136,6 +139,7 @@ SELECT
 FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%copy files%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
+  AND NOT is_client_generated_statement
 ORDER BY start_time DESC
 LIMIT 100;
 ```
@@ -221,6 +225,7 @@ WHERE rows_produced > 10000
   AND execution_status = 'SUCCESS'
   AND query_type = 'SELECT'
   AND user_name != 'SYSTEM'
+  AND NOT is_client_generated_statement
 ORDER BY rows_produced DESC
 LIMIT 100;
 ```
@@ -239,6 +244,7 @@ FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
 WHERE LOWER(query_text) LIKE '%result_scan%'
   AND start_time >= DATEADD('day', -{{DAYS}}, CURRENT_TIMESTAMP())
   AND user_name != 'SYSTEM'
+  AND NOT is_client_generated_statement
 ORDER BY rows_produced DESC
 LIMIT 100;
 ```
