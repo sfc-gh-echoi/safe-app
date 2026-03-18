@@ -273,7 +273,9 @@ Based on findings, suggest:
 | Detection window | User selected | Recent activity to scan |
 | Rapid IP change | 10 min | Max time between different IPs |
 | Shared IP threshold | 3+ users | IPs flagged as shared |
-| Brute force threshold | 5+ failures | Failed attempts to flag IP |
+| Brute force failure threshold | 5+ failures | Login events from an IP are considered as a single Brute Force attempt if the number of failures within the Brute force time window exceed the threshold |
+| Brute force time window | 30 seconds | Time window to determine whether a login failure was a brute force attempt|
+| Brute force trigger threshold | 5+ triggers | IP considered as a Brute Force IP if at least the specified number of failures are observed in the Brute force time window |
 
 ## Output
 
