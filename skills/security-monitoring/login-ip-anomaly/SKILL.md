@@ -31,7 +31,7 @@ WITH user_ip_baseline AS (
     MIN(event_timestamp) AS first_seen,
     MAX(event_timestamp) AS last_seen
   FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY
-  WHERE event_timestamp >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+  WHERE event_timestamp BETWEEN DATEADD('day', -37, CURRENT_TIMESTAMP()) AND DATEADD('day', -7, CURRENT_TIMESTAMP())
     AND client_ip != '0.0.0.0'
   GROUP BY user_name, client_ip
 ),
